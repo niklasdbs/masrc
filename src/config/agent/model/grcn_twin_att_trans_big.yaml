@@ -1,0 +1,23 @@
+name: grcn_twin_att_transfer
+is_rnn: False
+grcn:
+  resource_and_scaling_agent_specific: False
+  rnn: False
+  resource_embedding_dim: 512
+  agent_embedding_dim: 512
+  action_embedding_net: {hidden_size : 512, number_of_layers: 4, activation: ReLU}
+  q_net : {hidden_size : 512, number_of_layers: 6, activation: ReLU, activation_after_last_layer : False}
+  agent_embedding_net : {hidden_size : 256, number_of_layers: 2, activation: ReLU}
+  resource_embedding_net : {hidden_size : 512, number_of_layers: 2, activation: ReLU}
+  use_same_network_for_other_agents_resoruce_embeddings: True
+  distance_matrix_only_single_distance: True
+  use_agent_embedding: False
+  concat_agent_embedding: True
+  layer_norm: False
+  other_agent_after_q: False
+  normalization_type: sum
+  multiply_with_other: False
+  learnable_other_weight: True
+  use_nn_scaling : True
+  add_distance_to_action : True
+  scaling_net: { hidden_size: 64, number_of_layers: 2, activation: Sigmoid }

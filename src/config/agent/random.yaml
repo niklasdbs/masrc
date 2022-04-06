@@ -1,0 +1,8 @@
+# @package _global_
+agent: random
+observation: NoObservation
+strategy: RANDOM_ROUTE
+use_wait_action : False
+number_of_environment_steps: 0
+semi_markov: False
+parallel_env: False

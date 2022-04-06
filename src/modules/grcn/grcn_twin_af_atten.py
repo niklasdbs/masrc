@@ -1,0 +1,328 @@
+"""
+Module defines the PyTorch model for the Double-Deep-Q-Network (DDQN).
+"""
+import gym
+import torch
+from torch import nn
+import torch.nn.functional as F
+
+from omegaconf import DictConfig
+from torch.utils.checkpoint import checkpoint
+
+from utils.torch.models.mlp import MLP
+
+
+class GraphConvolutionResourceNetworkTwinAfAttention(nn.Module):
+
+    def __init__(self,
+                 distance_matrix,
+                 observation_space: gym.Space,
+                 number_of_agents: int,
+                 config: DictConfig,
+                 use_value_head=False):
+        super().__init__()
+        self.n_agents = number_of_agents
+        self.resource_dim = observation_space["resource_observations"].shape[1]
+        self.agent_dim = observation_space["current_agent_observations"].shape[0]
+        self.multiply_with_other = config.multiply_with_other
+        self.use_nn_scaling = config.use_nn_scaling
+        assert self.use_nn_scaling
+        self.add_distance_to_action = config.add_distance_to_action
+        self.input_distance_to_relevance_net = config.get("input_distance_to_relevance_net", True)
+        self.layer_norm = config.layer_norm
+        # calculate similarity matrix by putting each distance individually in the network as an input
+        self.distance_matrix_only_single_distance = config.get("distance_matrix_only_single_distance", False)
+        self.allow_checkpointing = False  # todo do not hardcode
+
+        self.resource_embedding_dim = config.resource_embedding_dim
+        self.agent_embedding_dim = config.agent_embedding_dim
+
+        self.distance_matrix = distance_matrix / distance_matrix.max()
+
+        self.agent_embedding_net = MLP(input_size=self.agent_dim,
+                                       output_size=self.agent_embedding_dim,
+                                       **config.agent_embedding_net)
+
+        self.resource_embedding_net = MLP(input_size=self.resource_dim,
+                                          output_size=self.resource_embedding_dim,
+                                          **config.resource_embedding_net)
+
+        self.att_per_edge_num_heads = config.get("att_per_edge_num_heads", 8)
+        self.att_resource_agent_net = nn.MultiheadAttention(embed_dim=self.resource_embedding_dim,
+                                                            num_heads=8,
+                                                            batch_first=True)
+        self.att_per_edge_net = nn.MultiheadAttention(embed_dim=self.resource_embedding_dim,
+                                                      num_heads=self.att_per_edge_num_heads,
+                                                      batch_first=True)
+
+        self.use_one_hot_id = config.get("use_one_hot_id", True)
+
+        self.no_agent_embedding = config.get("no_agent_embedding", False)
+        self.no_action_embedding_net = config.get("no_action_embedding_net", False)
+
+        if config.use_same_network_for_other_agents_resoruce_embeddings:
+            self.resource_embedding_net_other = self.resource_embedding_net
+        else:
+            self.resource_embedding_net_other = MLP(input_size=self.resource_dim,
+                                                    output_size=self.resource_embedding_dim,
+                                                    **config.resource_embedding_net)
+
+        if self.layer_norm:
+            self.agent_embedding_net = nn.Sequential(
+                    self.agent_embedding_net,
+                    nn.LayerNorm(self.agent_embedding_dim)
+            )
+
+            self.resource_embedding_net = nn.Sequential(
+                    self.resource_embedding_net,
+                    nn.LayerNorm(self.resource_embedding_dim)
+            )
+
+            if not config.use_same_network_for_other_agents_resoruce_embeddings:
+                self.resource_embedding_net_other = nn.Sequential(
+                        self.resource_embedding_net_other,
+                        nn.LayerNorm(self.resource_embedding_dim)
+                )
+
+        if self.distance_matrix_only_single_distance:
+            self.scaling_net = MLP(input_size=1 + (0 if self.no_agent_embedding else self.agent_embedding_dim) + (
+                1 if self.input_distance_to_relevance_net else 0),
+                                   output_size=1,
+                                   **config.scaling_net)
+        else:
+            self.scaling_net = MLP(input_size=self.distance_matrix.size(1) + (
+                0 if self.no_agent_embedding else self.agent_embedding_dim) + (
+                                                  1 if self.input_distance_to_relevance_net else 0),
+                                   output_size=self.distance_matrix.size(1),
+                                   **config.scaling_net)
+
+        action_embedding_net_input_dim = self.resource_embedding_dim + (self.n_agents if self.use_one_hot_id else 0)
+        if self.add_distance_to_action:
+            action_embedding_net_input_dim += 1
+
+        self.action_embedding_net = MLP(input_size=action_embedding_net_input_dim,
+                                        output_size=self.resource_embedding_dim,  # todo
+                                        **config.action_embedding_net)
+        self.use_action_specific_bias = config.get("action_specific_bias", False)
+        self.action_specific_bias = torch.nn.Parameter(torch.ones((self.distance_matrix.size(0), 1),
+                                                                  dtype=torch.float32), requires_grad=True)
+
+        self.q_net = MLP(input_size=self.resource_embedding_dim + (self.n_agents if self.use_one_hot_id else 0),
+                         output_size=1,  # todo
+                         **config.q_net)
+
+        self.other_agent_reduction = config.get("other_agent_reduction", "sum")
+        self.other_agent_after_q = config.get("other_agent_after_q", False)
+        self.use_learnable_other_weight = config.get("learnable_other_weight", False)
+        self.normalization_type = config.get("normalization_type", "n")
+
+        self.func_to_calc_sim_matrix = self.calculate_similarity_matrix_single \
+            if self.distance_matrix_only_single_distance \
+            else self.calculate_similarity_matrix
+
+        if self.use_learnable_other_weight:
+            self.other_weight = torch.nn.Parameter(torch.tensor(0.5, dtype=torch.float32), requires_grad=True)
+        else:
+            self.other_weight = 0.5
+
+        self.use_value_head = use_value_head
+
+        if self.use_value_head:
+            self.value_reduce = MLP(input_size=self.resource_embedding_dim,  # todo
+                                    output_size=4,
+                                    hidden_size=256,
+                                    number_of_layers=1,
+                                    activation_after_last_layer=False
+                                    )
+
+            self.value_head = MLP(input_size=4 * 166,  # todo
+                                  output_size=1,
+                                  hidden_size=256,
+                                  number_of_layers=1,
+                                  activation_after_last_layer=False)
+
+            self.linear_q = nn.Linear(in_features=166, out_features=166)  # todo
+
+            self.value_params = list(self.value_reduce.parameters()) + list(self.value_head.parameters())
+            self.non_value_params = [p for p in self.parameters() if p not in set(self.value_params)]
+
+    def encode_resources(self, resource_observations, agent_observations):
+        resource_embedding = self.resource_embedding_net(resource_observations)
+        # agent_embedding = self.agent_embedding_net(agent_observations)
+        # emb, _ = self.att_resource_agent_net.forward(query=resource_embedding, key=agent_embedding, value=resource_embedding)
+
+        return resource_embedding
+
+    def forward(self, state):
+        resource_observations = state["resource_observations"]
+        other_agent_resource_observations = state["other_agent_resource_observations"]
+        current_agent_id = state["current_agent_id"]
+        distance_to_action = state["distance_to_action"]
+        # state is in format resource x resource_features
+        # distance matrix is in format edges_with_resources x resources
+        # resource_encoding is in format resources x resource_embedding_dim
+
+        batch_size = current_agent_id.size(0)
+        seq_length = current_agent_id.size(1)
+
+        current_agent_resource_encoding = self.encode_resources(resource_observations.flatten(start_dim=0, end_dim=1),
+                                                                state["current_agent_observations"].flatten(start_dim=0,
+                                                                                                            end_dim=1).unsqueeze(
+                                                                    1))
+
+        other_agent_resource_encoding = self.encode_resources(other_agent_resource_observations.flatten(start_dim=0,
+                                                                                                        end_dim=2),
+                                                              state["other_agent_observations"].flatten(start_dim=0,
+                                                                                                        end_dim=2).unsqueeze(
+                                                                  1))
+
+        if self.no_agent_embedding:
+            agent_embedding = None
+            agent_embedding_others = None
+        else:
+            current_agent_obs = state["current_agent_observations"]
+            other_agent_obs =  state["other_agent_observations"]
+
+            if not self.use_one_hot_id: #todo quick hack to ignore agent id in agent obs
+                current_agent_obs[:,:, :self.n_agents] = 0
+                other_agent_obs[:,:,:, :self.n_agents] = 0
+
+            agent_embedding = self.agent_embedding_net(
+                current_agent_obs.flatten(start_dim=0, end_dim=1))
+            agent_embedding_others = self.agent_embedding_net(
+                other_agent_obs.flatten(start_dim=0, end_dim=2))
+
+        distance_to_action = distance_to_action.flatten(start_dim=0, end_dim=1)
+        distance_to_action_other_agents = state["distance_to_action_other_agents"].flatten(start_dim=0, end_dim=2)
+
+        if not self.distance_matrix_only_single_distance or not self.allow_checkpointing:
+            similarity_matrix_cur_agent = self.func_to_calc_sim_matrix(agent_embedding, distance_to_action)
+            similarity_matrix_other_agent = self.func_to_calc_sim_matrix(agent_embedding_others,
+                                                                         distance_to_action_other_agents)
+        else:
+            similarity_matrix_cur_agent = checkpoint(self.func_to_calc_sim_matrix, agent_embedding, distance_to_action)
+            similarity_matrix_other_agent = checkpoint(self.func_to_calc_sim_matrix,
+                                                       agent_embedding_others,
+                                                       distance_to_action_other_agents)
+
+        current_agent_per_edge = similarity_matrix_cur_agent @ current_agent_resource_encoding
+        # x has shape edges_with_resources x resource_embedding_dim
+
+        other_agent_per_edge = similarity_matrix_other_agent @ other_agent_resource_encoding
+        other_agent_per_edge = other_agent_per_edge.unflatten(dim=0,
+                                                              sizes=(batch_size * seq_length, self.n_agents - 1))
+
+        current_agent_id_one_hot = F.one_hot(current_agent_id.flatten(start_dim=0, end_dim=1), self.n_agents).unsqueeze(
+            -2) \
+            .expand(*current_agent_per_edge.shape[:2], self.n_agents)
+        other_agent_ids = state["other_agent_ids"].flatten(start_dim=0, end_dim=1)
+        other_agent_ids_one_hot = F.one_hot(other_agent_ids, self.n_agents).expand(*other_agent_per_edge.shape[:3],
+                                                                                   self.n_agents)
+
+        if not self.no_action_embedding_net:
+            if self.add_distance_to_action:
+                distance_to_action_other_agents = distance_to_action_other_agents.unflatten(dim=0,
+                                                                                            sizes=(
+                                                                                                    batch_size * seq_length,
+                                                                                                    self.n_agents - 1))
+                input_action_emb_net_current_agent = [current_agent_per_edge, distance_to_action.unsqueeze(-1)]
+                input_action_emb_net_other_agent = [other_agent_per_edge, distance_to_action_other_agents.unsqueeze(-1)]
+            else:
+                input_action_emb_net_current_agent = [current_agent_per_edge]
+                input_action_emb_net_other_agent = [other_agent_per_edge]
+
+            if self.use_one_hot_id:
+                input_action_emb_net_current_agent.append(current_agent_id_one_hot)
+                input_action_emb_net_other_agent.append(other_agent_ids_one_hot)
+
+            current_agent_per_edge = self.action_embedding_net(torch.cat(input_action_emb_net_current_agent, dim=-1))
+            other_agent_per_edge = self.action_embedding_net(torch.cat(input_action_emb_net_other_agent, dim=-1))
+
+        if self.other_agent_reduction == "sum":
+            other_agent_per_edge = other_agent_per_edge.sum(dim=1)
+        elif self.other_agent_reduction == "mean":
+            other_agent_per_edge = other_agent_per_edge.mean(dim=1)
+        elif self.other_agent_reduction == "max":
+            other_agent_per_edge = other_agent_per_edge.max(dim=1)[0]
+
+        # todo
+        combined_per_action, _ = self.att_per_edge_net.forward(query=current_agent_per_edge,
+                                                               key=other_agent_per_edge,
+                                                               value=current_agent_per_edge)
+
+        input_q_net = [combined_per_action]
+
+        if self.use_one_hot_id:
+            input_q_net.append(current_agent_id_one_hot)
+
+        q = self.q_net(torch.cat(input_q_net, dim=-1))
+        if self.use_action_specific_bias:
+            q = q + self.action_specific_bias.unsqueeze(0).expand(q.size(0), -1, -1)
+
+        q = q.squeeze(-1).unflatten(dim=0, sizes=(batch_size, seq_length))
+
+        if self.use_value_head:
+            q = self.linear_q(q)
+            y = self.value_reduce(combined_per_action.detach())
+            y = torch.flatten(y, start_dim=-2)
+            v = self.value_head(y).squeeze(-1)
+            v = v.unflatten(dim=0, sizes=(batch_size, seq_length))
+            return q, v
+        else:
+            return q
+
+    def calculate_similarity_matrix(self, agent_embedding, distance_to_action):
+        # distance matrix is in format edges_with_resources x resources
+
+        input_scaling_net = [self.distance_matrix.unsqueeze(0).expand(distance_to_action.size(0), -1, -1)]
+
+        if not self.no_agent_embedding:
+            input_scaling_net.append(agent_embedding.unsqueeze(-2).expand(-1, self.distance_matrix.size(0), -1))
+
+        if self.input_distance_to_relevance_net:
+            input_scaling_net.append(distance_to_action.unsqueeze(-1))
+
+        dist_matrix_enriched = torch.cat(input_scaling_net, dim=-1)
+
+        similarity_matrix = self.scaling_net(dist_matrix_enriched)
+
+        if self.normalization_type == "sum":
+            similarity_matrix = similarity_matrix / similarity_matrix.sum(-1, keepdim=True)
+        elif self.normalization_type == "n":
+            similarity_matrix = similarity_matrix / (similarity_matrix != 0).sum(-1, keepdim=True)
+        elif self.normalization_type == "softmax":
+            similarity_matrix = F.softmax(similarity_matrix, dim=-1)
+        elif self.normalization_type == "none":
+            pass
+
+        return similarity_matrix
+
+    def calculate_similarity_matrix_single(self, agent_embedding, distance_to_action):
+        # distance matrix is in format edges_with_resources x resources
+        input_scaling_net = [self.distance_matrix.unsqueeze(0).expand(distance_to_action.size(0), -1, -1).unsqueeze(-1)]
+
+        if not self.no_agent_embedding:
+            input_scaling_net.append(agent_embedding.unsqueeze(-2).unsqueeze(-2).expand(-1,
+                                                                                        self.distance_matrix.size(0),
+                                                                                        self.distance_matrix.size(1),
+                                                                                        -1))
+
+        if self.input_distance_to_relevance_net:
+            input_scaling_net.append(distance_to_action.unsqueeze(-1).unsqueeze(-1).expand(-1,
+                                                                                           -1,
+                                                                                           self.distance_matrix.size(1),
+                                                                                           -1))
+
+        dist_matrix_enriched = torch.cat(input_scaling_net, dim=-1)
+
+        similarity_matrix = self.scaling_net(dist_matrix_enriched).squeeze(-1)
+        # similarity_matrix = checkpoint(self.scaling_net, dist_matrix_enriched).squeeze(-1)
+
+        if self.normalization_type == "sum":
+            similarity_matrix = similarity_matrix / similarity_matrix.sum(-1, keepdim=True)
+        elif self.normalization_type == "n":
+            similarity_matrix = similarity_matrix / (similarity_matrix != 0).sum(-1, keepdim=True)
+        elif self.normalization_type == "softmax":
+            similarity_matrix = F.softmax(similarity_matrix, dim=-1)
+
+        return similarity_matrix

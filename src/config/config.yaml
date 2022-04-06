@@ -1,0 +1,103 @@
+experiment_name: ???
+#environment configuration
+speed_in_kmh : 5
+number_of_agents : 2
+gamma : 0.999
+year : 2019
+start_hour : 7
+end_hour : 19
+shuffle_days : True #in the evaluation envs the days are never shuffled
+observation: FullObservationDDQN #observation-creator for individual agent observations
+state_observation: NoObservation #observation-creator to create (global) state observations, accessed with state()
+parallel_env: False
+use_wait_action: False
+small_event_log : False
+path_to_event_log : "../data/event_log_2019.gzip"
+path_to_bay_locations: "../data/bay_locations.csv"
+path_to_graphs : "../data/graphs/"
+delta_degree : 0.1 #make the graph a little bit bigger by adding delta times the difference in each direction to the bounding box
+wait_action_time : 1 #the time a wait action waits
+random_start_point: False
+shared_reward: False #agents receive a joint reward
+create_observation_between_steps: False
+move_other_agents_between_edges: True
+calculate_advanced_statistics:
+  - TEST
+  - VALIDATION
+
+
+#observation configuration (ddqn)
+#agent specific
+add_other_agents_targets_to_resource: False #add information about the target of other agents
+add_current_position_of_other_agents: True #add the current position of other agents
+add_route_positions: False #add a flag four every resource on the current route of an agent
+
+#non agent specific
+do_not_use_fined_status: False #treat fined resources as occupied
+optimistic_in_violation: True #add additional flag if an occupied resource where the arrival time is smaller than the max parking time is set to in violation
+add_x_y_position_of_resource: False
+
+#training configuration
+trainer: SequentialTrainer
+batch_size : 128
+semi_markov : True
+replay_whole_episodes: False
+sequence_length : 50
+seed : 352625 #todo implement everywhere
+over_sample_ends : False
+on_policy_replay: False
+number_of_environment_steps: 25000000
+replay_size : 100000
+train_every : 16
+train_steps : 1 #how often should be trained when training
+train_at_episode_end : False
+device: cuda
+early_stopping: False
+early_stopping_patience: 10
+early_stopping_delta: 0.5
+start_learning: 0
+use_episode_for_logging: True
+reward_clipping: True #True/clip = clip(0,1) False = Identiy, tanh = tanh
+
+
+#agent configuration
+load_agent_model: False
+load_step: -1
+shared_agent: True
+save_model_dir : "models/"
+
+#logging
+log_metrics_every : 20
+eval_every : 800
+evaluation_episodes: 1 #the number of episodes to average over for evaluation
+save_every : 800
+render : False
+render_steps_of_actions : True
+render_resolution:
+  w: 1800
+  h: 1800
+  dpi: 100.0
+log_dir : "logs/"
+
+defaults:
+  - _self_
+  - agent: ddqn
+  - area: docklands
+  - launcher : local #local or slurm
+  - {$launcher}
+#  - override hydra/sweeper: ax
+#  - override hydra/sweeper: optuna
+#  - override hydra/sweeper/sampler: random
+
+special_experiment_name: "standard"
+
+hydra:
+  sweep:
+    dir: multirun/${special_experiment_name}/${experiment_name}/${number_of_agents}/${area_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    config:
+      override_dirname:
+        exclude_keys:
+          - special_experiment_name
+          - number_of_agents

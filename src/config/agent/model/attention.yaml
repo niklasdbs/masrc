@@ -1,0 +1,9 @@
+name: attention
+is_rnn: False
+num_heads: 8
+number_graph_encoder_layers: 3
+embed_dim: 128
+skip_connection: True
+batch_normalization: True
+feed_forward_layer: { hidden_size: 512, number_of_layers: 2, activation: ELU, activation_after_last_layer: False }
+q_layer: {hidden_size : 256, number_of_layers: 2, activation: ELU, activation_after_last_layer : False}

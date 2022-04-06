@@ -1,0 +1,5 @@
+# @package _global_
+area : ['Courtney', 'Family', 'Victoria Market', 'Regency', 'West Melbourne', 'Princes Theatre', 'Titles',
+        'Magistrates', 'Supreme', 'Mint', 'Library', 'Hyatt', 'Banks', 'Twin Towers', 'Spencer',
+        'McKillop', 'Tavistock','City Square', 'Chinatown', 'RACV', 'Markilles', 'Degraves', 'Docklands', 'Queensberry']
+area_name: all

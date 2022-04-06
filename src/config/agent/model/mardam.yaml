@@ -1,0 +1,6 @@
+name: mardam
+is_rnn: False
+model_dim : 128
+n_head: 8
+cutomer_encoder_layer_fead_forward_size: 512
+customer_encoder : { num_layers : 3 }

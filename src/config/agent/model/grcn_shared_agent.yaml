@@ -1,0 +1,11 @@
+name: grcn_shared_agent
+is_rnn: False
+grcn:
+  resource_and_scaling_agent_specific: False
+  add_distance_to_action: True
+  rnn: False
+  resource_embedding_dim: 256
+  q_net : {hidden_size : 256, number_of_layers: 2, activation: ReLU, activation_after_last_layer : False}
+  resource_embedding_net : {hidden_size : 256, number_of_layers: 2, activation: ReLU}
+  use_nn_scaling : True
+  scaling_net: { hidden_size: 64, number_of_layers: 2, activation: Sigmoid }

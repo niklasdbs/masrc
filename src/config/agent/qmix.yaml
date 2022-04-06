@@ -1,0 +1,54 @@
+# @package _global_
+agent: qmix
+trainer: CLDETrainer
+distance_normalization: 3000
+add_other_agents_targets_to_resource : True #add which agents targets the resource, walking time and arrival time of the agents
+add_x_y_position_of_resource: True
+create_observation_between_steps: True
+shared_reward: True #agents receive a joint reward
+observation: FullObservationGRCNTwin #FullObservationDDQN
+state_observation: JointObservationDDQN #FlatJointObservation
+parallel_env: True
+reward_clipping: tanh
+
+epsilon_initial: 1.0 #number of steps until the epsilon decay starts
+epsilon_min: 0.01 #minimum value of epsilon
+epsilon_decay_start: 5000 #number of steps until the epsilon decay starts
+steps_till_min_epsilon: 500000 #steps until the minimum epsilon value should be reached
+epsilon_decay: exp #exp or linear
+
+#mac config
+action_selector: EpsilonGreedyActionSelector
+mac_output_probs: False #output q values/logits instead of probs
+
+slow_target_fraction : 1.0 #polyak averaging
+max_gradient_norm : 20.0
+update_target_every : 5000 #after how many gradient steps the target should be updated
+optimistic_in_violation: True
+n_steps: 5
+batch_size: 32
+max_sequence_length: 20
+over_sample_ends: False
+double_q: True
+number_of_environment_steps: 250000000
+
+semi_markov: True
+start_learning: 8
+replay_size: 100
+on_policy_replay: False
+replay_whole_episodes: True
+
+train_every:  1
+train_steps : 4
+log_metrics_every : 20
+eval_every : 800
+save_every : 800
+
+
+defaults:
+  - model: grcn_twin_att
+  - mixer: qmixer_grcn
+
+loss_function: SmoothL1Loss
+model_optimizer: { optimizer: RMSprop ,lr: 0.002, alpha: 0.99}
+#model_optimizer: { optimizer: Adam ,lr: 0.00001}

@@ -1,0 +1,34 @@
+# @package _global_
+agent: ac
+observation: FullObservationGRCNTwin
+add_other_agents_targets_to_resource: False #add information about the target of other agents
+add_current_position_of_other_agents: True #add the current position of other agents
+add_route_positions: False #add a flag four every resource on the current route of an agent
+
+#non agent specific
+do_not_use_fined_status: False #treat fined resources as occupied
+optimistic_in_violation: True #an occupied resource where the arrival time is smaller than the max parking time is set to in violation
+add_x_y_position_of_resource: True
+
+
+replay_whole_episodes : False
+train_steps: 1
+train_every: 32
+number_of_agents: 2
+
+start_learning: 1
+replay_size: 32
+on_policy_replay: True
+batch_size: 32
+max_sequence_length: 32
+
+test_max_likelihood: False
+train_at_episode_end : False
+model_optimizer: { optimizer: Adam ,lr: 0.00001 }
+gamma : 0.999
+semi_markov : True
+max_gradient_norm : 2.0
+shared_agent : True
+distance_normalization: 3000
+defaults:
+  - model: attention_graph_decoder

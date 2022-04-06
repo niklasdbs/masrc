@@ -1,0 +1,6 @@
+# @package _global_
+experiment_name: "lerk"
+number_of_agents: 10
+
+defaults:
+  - override /agent: lerk

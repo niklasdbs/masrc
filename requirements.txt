@@ -1,0 +1,36 @@
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torch==1.10.2+cu113
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torchvision==0.11.3+cu113
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torchaudio==0.10.2+cu113
+cloudpickle
+flake8
+gym
+matplotlib
+networkx
+numpy
+pandas
+Pillow
+scipy
+ray
+opencv-python
+osmnx
+scikit-learn
+tqdm
+pettingzoo
+crc32c
+tensorboard
+moviepy
+pyarrow
+modin
+hydra-core
+hydra-ax-sweeper
+hydra-optuna-sweeper
+hydra-submitit-launcher
+seaborn
+omegaconf
+wandb
+pytest
+jupyter #otherwise matplotlib wont work
+Cython

@@ -1,0 +1,58 @@
+# @package _global_
+agent: coma
+trainer: CLDETrainer
+distance_normalization: 3000
+add_other_agents_targets_to_resource : True #add which agents targets the resource, walking time and arrival time of the agents
+create_observation_between_steps: True
+shared_reward: True #agents receive a joint reward
+observation: FullObservationDDQN
+state_observation: FlatJointObservation #JointObservationDDQN
+parallel_env: True
+optimistic_in_violation: False
+
+
+epsilon: 0.5
+epsilon_min: 0.01
+epsilon_decay : 0.000001
+epsilon_decay_start: 5000
+
+#mac config
+action_selector: CategoricalActionSelector
+mac_output_probs: True #output probs instead of q values/logits
+
+slow_target_fraction : 1.0 #polyak averaging
+max_gradient_norm : 10.0
+update_target_every : 1000 #after how many gradient steps the target should be updated
+
+batch_size: 8
+max_sequence_length: 25
+semi_markov: True
+td_lambda: 0.0
+start_learning: 8
+replay_size: 8
+on_policy_replay: True
+
+train_every:  8
+train_steps : 4
+log_metrics_every : 20
+eval_every : 400
+save_every : 400
+
+agent_optimizer: { optimizer: Adam ,lr: 0.0001, alpha: 0.99}
+critic_optimizer: { optimizer: Adam ,lr: 0.0001, alpha: 0.99}
+
+critic_name: global_critic
+#critic : {hidden_size : 256, number_of_layers: 4, activation: ReLU, activation_after_last_layer : False}
+critic: {
+  number_graph_encoder_layers: 3,
+  num_heads: 4,
+  embed_dim: 32,
+  skip_connection: False,
+  batch_normalization: False,
+  feed_forward_layer: {hidden_size: 512, number_of_layers: 2, activation: ReLU, activation_after_last_layer: False},
+  q_layer: {hidden_size : 256, number_of_layers: 2, activation: ReLU, activation_after_last_layer : False}
+}
+add_last_action_critic: True
+
+defaults:
+  - model: grcn_shared

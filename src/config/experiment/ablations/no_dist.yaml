@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - ablations/standard
+
+model:
+  grcn:
+    add_distance_to_action: False
+    input_distance_to_relevance_net: False

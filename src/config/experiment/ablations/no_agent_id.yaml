@@ -1,0 +1,7 @@
+# @package _global_
+defaults:
+  - ablations/standard
+
+model:
+  grcn:
+    use_one_hot_id: False

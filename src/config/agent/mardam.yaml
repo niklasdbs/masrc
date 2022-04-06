@@ -1,0 +1,22 @@
+# @package _global_
+agent: mardam
+observation: FullObservationMardam
+replay_whole_episodes : False
+train_steps: 1
+train_every: 32
+train_at_episode_end : False
+model_optimizer: { optimizer: Adam ,lr: 0.00001 }
+gamma : 0.999
+semi_markov : True
+reward_clipping : tanh
+gradient_clipping : True
+shared_agent : True
+distance_normalization: 3000
+max_gradient_norm: 2.0
+
+create_observation_between_steps: False
+trainer: SequentialTrainer
+shared_reward: False
+use_other_agent_features: False
+defaults:
+  - model: mardam

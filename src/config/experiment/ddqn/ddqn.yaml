@@ -1,0 +1,33 @@
+# @package _global_
+experiment_name: "ddqn"
+shared_agent : False
+early_stopping: True
+
+#number_of_agents:
+#  type: range
+#  bounds: [10, 20]
+defaults:
+  - override /agent: ddqn
+
+#hydra:
+#  sweeper:
+#    ax_config:
+#      max_trials: 10
+#      is_noisy: false
+#      params:
+#        number_of_agents:
+#          type: range
+#          bounds: [ 10, 20 ]
+
+#hydra:
+#  sweeper:
+#    sampler:
+#      seed: 123
+#    n_trials: 10
+#    n_jobs: 1
+#    direction: maximize
+#    search_space:
+#      number_of_agents:
+#        type: int
+#        low: 10
+#        high: 20

@@ -1,0 +1,27 @@
+name: attention_graph_decoder
+is_rnn: False
+num_heads: 8
+number_graph_encoder_layers: 2
+embed_dim: 128
+skip_connection: False
+batch_normalization: False #in dqn problematic=> to unstable
+feed_forward_layer: { hidden_size: 256, number_of_layers: 2, activation: ELU, activation_after_last_layer: False }
+use_nn_scaling : True
+resource_and_scaling_agent_specific: False
+scaling_net: { hidden_size: 64, number_of_layers: 2, activation: Sigmoid }
+output_per_edge_embedding_dim: 16
+per_action_embeding: {hidden_size : 64, number_of_layers: 2, activation: ELU, activation_after_last_layer : False}
+output_head: {hidden_size : 256, number_of_layers: 3, activation: ELU, activation_after_last_layer : False}
+
+#name: attention_graph_decoder
+#is_rnn: False
+#num_heads: 8
+#number_graph_encoder_layers: 3
+#embed_dim: 128
+#skip_connection: False
+#batch_normalization: False #in dqn problematic=> to unstable
+#feed_forward_layer: { hidden_size: 512, number_of_layers: 2, activation: ELU, activation_after_last_layer: False }
+#use_nn_scaling : True
+#resource_and_scaling_agent_specific: False
+#scaling_net: { hidden_size: 64, number_of_layers: 2, activation: Sigmoid }
+#q_layer: {hidden_size : 256, number_of_layers: 2, activation: ELU, activation_after_last_layer : False}

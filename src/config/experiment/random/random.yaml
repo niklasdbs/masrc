@@ -1,0 +1,5 @@
+# @package _global_
+experiment_name: "random"
+shared_agent : True
+defaults:
+  - override /agent: random

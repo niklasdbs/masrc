@@ -1,0 +1,8 @@
+# @package _global_
+experiment_name: "greedy"
+defaults:
+  - override /agent: greedy
+
+use_wait_action: True
+decision_epoch: 0 #unified timepoints where all agents should make decisions. Set to 0 to disable If enabled wait_action_time must be set to 1.
+wait_action_time: 1

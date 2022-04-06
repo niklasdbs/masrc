@@ -1,0 +1,43 @@
+# @package _global_
+experiment_name: "grcn_shared_agent"
+shared_agent : True
+early_stopping: True
+add_other_agents_targets_to_resource: True
+add_current_position_of_other_agents: True #add the current position of other agents
+add_route_positions: False #add a flag four every resource on the current route of an agent
+
+#non agent specific
+do_not_use_fined_status: False #treat fined resources as occupied
+optimistic_in_violation: True
+add_x_y_position_of_resource: True
+
+observation: FullObservationGRCNSharedAgent
+shared_reward: False
+create_observation_between_steps: False
+replay_size : 100000
+model_optimizer: { optimizer: RMSprop ,lr: 0.002, alpha: 0.99}
+#model_optimizer: { optimizer: Adam ,lr: 0.0012}
+update_target_every : 3125 # 125 #3125
+slow_target_fraction : 1.0
+train_every : 32
+batch_size : 256
+max_gradient_norm : 1000.0
+train_steps: 1
+reward_clipping: False
+
+trainer: ParallelSequentialAsyncResetTrainer
+number_of_parallel_envs: 16
+
+eval_every : 1600
+evaluation_episodes: 1
+save_every : 1600
+
+epsilon_initial: 1.0 #number of steps until the epsilon decay starts
+epsilon_min: 0.01 #minimum value of epsilon (e.g. 0.01)
+epsilon_decay_start: 10000 #number of steps until the epsilon decay starts
+steps_till_min_epsilon: 1500000 #steps until the minimum epsilon value should be reached (e.g. 200.000)
+epsilon_decay: exp #exp or linear
+
+defaults:
+  - override /agent: ddqn
+  - override /agent/model@model: grcn_shared_agent

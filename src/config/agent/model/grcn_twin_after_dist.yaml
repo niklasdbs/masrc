@@ -1,0 +1,20 @@
+name: grcn_twin_after_dist
+is_rnn: False
+grcn:
+  resource_and_scaling_agent_specific: False
+  rnn: False
+  resource_embedding_dim: 256
+  agent_embedding_dim: 256
+  q_net : {hidden_size : 256, number_of_layers: 2, activation: ReLU, activation_after_last_layer : False}
+  agent_embedding_net : {hidden_size : 256, number_of_layers: 2, activation: ReLU}
+  resource_embedding_net : {hidden_size : 256, number_of_layers: 2, activation: ReLU}
+  final_resource_embedding_net : {hidden_size : 256, number_of_layers: 2, activation: ReLU}
+  use_same_network_for_other_agents_resoruce_embeddings: True
+  layer_norm: False
+  other_agent_after_q: False
+  normalization_type: n
+  multiply_with_other: False
+  learnable_other_weight: True
+  use_nn_scaling : True
+  add_distance_to_action : True
+  scaling_net: { hidden_size: 64, number_of_layers: 2, activation: Sigmoid }

@@ -1,0 +1,39 @@
+# @package _global_
+experiment_name: "twin_grcn_abl"
+shared_agent : True
+early_stopping: True
+add_other_agents_targets_to_resource: False
+add_x_y_position_of_resource: True
+observation: FullObservationGRCNTwin
+shared_reward: False
+create_observation_between_steps: False
+replay_size : 250000
+model_optimizer: { optimizer: RMSprop ,lr: 0.0001, alpha: 0.99}
+#model_optimizer: { optimizer: Adam ,lr: 0.0012}
+update_target_every : 2500 # 125 #3125
+slow_target_fraction : 1.0
+train_every : 32
+batch_size : 256
+max_gradient_norm : 2.0
+gradient_clipping: False
+train_steps: 1
+reward_clipping: tanh
+prioritized_replay: False
+move_other_agents_between_edges: True
+
+trainer: ParallelSequentialAsyncResetTrainer
+number_of_parallel_envs: 8
+
+eval_every : 1600
+evaluation_episodes: 1
+save_every : 1600
+
+epsilon_initial: 1.0 #number of steps until the epsilon decay starts
+epsilon_min: 0.01 #minimum value of epsilon (e.g. 0.01)
+epsilon_decay_start: 5000 #number of steps until the epsilon decay starts
+steps_till_min_epsilon: 1500000 #steps until the minimum epsilon value should be reached (e.g. 200.000)
+epsilon_decay: exp #exp or linear
+
+defaults:
+  - override /agent: ddqn
+  - override /agent/model@model: grcn_twin_att_big

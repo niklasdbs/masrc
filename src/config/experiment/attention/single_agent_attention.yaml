@@ -1,0 +1,16 @@
+# @package _global_
+experiment_name: "sa_att"
+state_observation: ZeroObservation
+add_x_y_position_of_resource: True
+semi_markov: True
+early_stopping: True
+number_of_agents: 1
+shared_reward: False
+start_learning: 16
+add_other_agents_targets_to_resource: False
+create_observation_between_steps: False
+update_target_every: 12500
+defaults:
+  - override /agent: qmix
+  - override /agent/model@model: attention_graph_decoder
+  - override /agent/mixer@mixer: none

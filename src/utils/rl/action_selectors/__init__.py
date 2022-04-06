@@ -1,0 +1,5 @@
+from utils.rl.action_selectors.categorical_action_selector import CategoricalActionSelector
+from utils.rl.action_selectors.epsilon_greedy_action_selector import EpsilonGreedyActionSelector
+
+EpsilonGreedyActionSelector = EpsilonGreedyActionSelector
+CategoricalActionSelector = CategoricalActionSelector

@@ -1,0 +1,86 @@
+# @package _global_
+experiment_name: "debug"
+path_to_event_log : "../data/event_log_2019.gzip" #_small to use smaller event log
+small_event_log : False #use only first week of events
+shuffle_days : False
+render: False
+shared_agent : True
+number_of_agents: 1
+device: cuda:1 #cuda:1
+create_observation_between_steps: False
+shared_reward: False #agents receive a joint reward
+observation: FullObservationDDQN #FullObservationAttention #FullObservationMardam #FullObservationDDQN FullObservationGRCNTwin
+state_observation: NoObservation
+#state_observation: ZeroObservation FlatJointObservation #JointObservationDDQN FlatJointObservation
+add_other_agents_targets_to_resource: False
+#resource_and_scaling_agent_specific: True
+#defaults:
+#  - override /agent: ddqn
+#  - override /agent/model@model: grcn_twin
+
+calculate_advanced_statistics:
+  - TEST
+  - VALIDATION
+
+
+prioritized_replay: False
+semi_markov: True
+gamma: 0.999
+replay_whole_epsiodes: False
+#trainer: ParallelSequentialAsyncResetTrainer #ParallelSequentialAsyncResetTrainer SequentialTrainer
+number_of_parallel_envs: 2
+
+#defaults:
+#  - override /agent: qmix
+#  - override /agent/model@model: grcn_twin_after_dist #grcn_twin_after_dist #grcn_shared_info #attention_grcn #attention_graph_decoder #grcn_shared
+#  - override /agent/mixer@mixer: qmixer_grcn #qmixer_mha
+
+#max_gradient_norm: None
+#
+defaults:
+  - override /agent: ddqn
+#  - override /agent/model@model: grcn_twin_att
+#replay_whole_episodes : False
+#max_sequence_length: 1000
+#train_at_episode_end : False
+
+#defaults:
+#  - override /agent: greedy
+#trainer: SyncTrainer
+#action_selector: CategoricalActionSelector
+#test_max_likelihood: False
+#parallel_env: True
+#reward_clipping: tanh
+#epsilon_min: 0.01 #minimum value of epsilon
+#epsilon_decay_start: 5000 #number of steps until the epsilon decay starts
+#steps_till_min_epsilon: 500000 #steps until the minimum epsilon value should be reached
+#epsilon_decay: exp #exp or linear
+#
+#mac_output_probs: False
+
+use_wait_action: False
+decision_epoch: 0 #unified timepoints where all agents should make decisions. Set to 0 to disable If enabled wait_action_time must be set to 1.
+wait_action_time: 1
+
+#
+#eval_every : 16
+evaluation_episodes: 1 #the number of episodes to average over for evaluation
+save_every : 1600
+
+epsilon_initial: 0.5
+
+batch_size : 32
+
+train_steps: 1
+train_every: 64
+start_learning: 128
+
+
+#model_dim : 128
+#n_head: 8
+#customer_encoder : { num_layers : 4 }
+
+hydra:
+  job_logging:
+    root:
+      level: DEBUG

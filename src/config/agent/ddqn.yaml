@@ -1,0 +1,34 @@
+# @package _global_
+agent: ddqn
+observation: FullObservationDDQN
+distance_normalization: 3000
+
+
+epsilon_initial: 1.0 #number of steps until the epsilon decay starts
+epsilon_min: 0.01 #minimum value of epsilon
+epsilon_decay_start: 5000 #number of steps until the epsilon decay starts
+steps_till_min_epsilon: 200000 #steps until the minimum epsilon value should be reached
+epsilon_decay: exp #exp or linear
+
+early_stopping_patience: 10
+
+replay_whole_episodes: False
+on_policy_replay: False
+train_at_episode_end : False
+start_learning: 5000
+
+gradient_clipping : True
+reward_clipping : True
+slow_target_fraction : 1.0 #polyak averaging
+max_gradient_norm : 10.0
+update_target_every : 1000 #after how many gradient steps the target should be updated
+double_dqn: True
+
+add_other_agents_targets_to_resource : True #add which agents targets the resource, walking time and arrival time of the agents
+
+defaults:
+  - model: ddqn/grcn
+
+
+loss_function: SmoothL1Loss
+model_optimizer: { optimizer: RMSprop ,lr: 0.0012, alpha: 0.99}

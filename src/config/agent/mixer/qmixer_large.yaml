@@ -1,0 +1,6 @@
+name: qmixer
+embedding_dim: 256
+hyper_w1: {number_of_layers: 4, hidden_size: 256, activation: ReLU, activation_after_last_layer : False}
+hyper_final: {number_of_layers: 4, hidden_size: 256, activation: ReLU, activation_after_last_layer : False}
+#state dependent bias for last layer
+V:  {number_of_layers: 4, hidden_size: 256, activation: ReLU, activation_after_last_layer : False}

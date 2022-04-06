@@ -1,0 +1,29 @@
+# @package _global_
+agent: joint_ddqn
+trainer: JointTrainer
+observation: NoObservation
+state_observation: JointObservationDDQN
+distance_normalization: 3000
+shared_agent: False
+parallel_env: True
+create_observation_between_steps: True
+shared_reward: True #agents receive a joint reward
+
+epsilon: 1.0
+epsilon_min: 0.01
+epsilon_decay : 0.000001
+epsilon_decay_start: 5000
+
+gradient_clipping : False
+reward_clipping : False
+slow_target_fraction : 1.0 #polyak averaging
+max_gradient_norm : 100.0
+update_target_every : 50000 #after how many gradient steps the target should be updated
+
+
+defaults:
+  - model: ddqn/joint_grcn
+
+
+loss_function: SmoothL1Loss
+model_optimizer: { optimizer: RMSprop ,lr: 0.0012, alpha: 0.99}

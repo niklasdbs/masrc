@@ -1,0 +1,6 @@
+# @package _global_
+experiment_name: "mardam"
+early_stopping: True
+
+defaults:
+  - override /agent: mardam

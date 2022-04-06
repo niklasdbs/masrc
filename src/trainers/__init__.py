@@ -1,0 +1,13 @@
+from trainers.clde_trainer import CLDETrainer
+from trainers.joint_trainer import JointTrainer
+from trainers.parallel_sequential_trainer import ParallelSequentialTrainer
+from trainers.parallel_sequential_async_reset_trainer import ParallelSequentialAsyncResetTrainer
+from trainers.sequential_trainer import SequentialTrainer
+from trainers.sync_trainer import SyncTrainer
+
+JointTrainer = JointTrainer
+SequentialTrainer = SequentialTrainer
+CLDETrainer = CLDETrainer
+ParallelSequentialTrainer = ParallelSequentialTrainer
+SyncTrainer = SyncTrainer
+ParallelSequentialAsyncResetTrainer = ParallelSequentialAsyncResetTrainer

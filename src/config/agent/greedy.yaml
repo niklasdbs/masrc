@@ -1,0 +1,9 @@
+# @package _global_
+agent: greedy
+observation: FullObservationGreedy
+use_wait_action: True
+decision_epoch: 60 #unified timepoints where all agents should make decisions. Set to 0 to disable If enabled wait_action_time must be set to 1.
+wait_action_time: 1
+shared_agent: True
+number_of_environment_steps: 0
+assign_only_one_resource_to_greedy: True

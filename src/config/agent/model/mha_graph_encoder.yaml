@@ -1,0 +1,8 @@
+name: mha_graph_encoder
+num_heads: 8
+number_graph_encoder_layers: 2
+embed_dim: 128
+skip_connection: False
+batch_normalization: False
+feed_forward_layer: { hidden_size: 512, number_of_layers: 2, activation: ReLU, activation_after_last_layer: False }
+q_layer: {hidden_size : 256, number_of_layers: 2, activation: ReLU, activation_after_last_layer : False}

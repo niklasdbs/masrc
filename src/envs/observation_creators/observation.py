@@ -1,0 +1,23 @@
+from envs.observation_creators.flat_joint_observation import FlatJointObservation
+from envs.observation_creators.full_observation_attention import FullObservationAttention
+from envs.observation_creators.full_observation_ddqn import FullObservationDDQN
+from envs.observation_creators.full_observation_grcn_shared_agent import FullObservationGRCNSharedAgent
+from envs.observation_creators.full_observation_grcn_twin import FullObservationGRCNTwin
+from envs.observation_creators.full_observation_greedy import FullObservationGreedy
+from envs.observation_creators.full_observation_mardam import FullObservationMardam
+from envs.observation_creators.joint_observation_ddqn import JointObservationDDQN
+from envs.observation_creators.no_observation import NoObservation
+from envs.observation_creators.full_observation_lerk import FullObservationLerk
+from envs.observation_creators.zero_observation import ZeroObservation
+
+FullObservationDDQN = FullObservationDDQN
+FullObservationGreedy = FullObservationGreedy
+NoObservation = NoObservation
+FullObservationMardam = FullObservationMardam
+FullObservationLerk = FullObservationLerk
+JointObservationDDQN = JointObservationDDQN
+FlatJointObservation = FlatJointObservation
+ZeroObservation = ZeroObservation
+FullObservationAttention = FullObservationAttention
+FullObservationGRCNTwin = FullObservationGRCNTwin
+FullObservationGRCNSharedAgent = FullObservationGRCNSharedAgent
