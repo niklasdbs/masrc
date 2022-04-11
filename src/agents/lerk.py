@@ -15,7 +15,7 @@ from envs.potop_env import PotopEnv
 
 class Lerk(Agent):
 
-    def __init__(self, action_space: Any, observation_space: Any, graph, config: DictConfig) -> None:
+    def __init__(self, action_space: Any, observation_space: Any, state_observation_space: Any, graph, config: DictConfig) -> None:
         """
         Initializes a new instance.
 
@@ -23,7 +23,7 @@ class Lerk(Agent):
         :param observation_space: The agents observation space.
         """
         super().__init__(action_space, observation_space, graph, config)
-        self.time_prob_halved = config.time_prob_halved
+        self.avg_violation_time = config.avg_violation_time
         self.population_size = config.population_size
         self.lerk_iterations = config.lerk_iterations
         self.local_rate = config.local_rate
@@ -37,12 +37,11 @@ class Lerk(Agent):
         self.decision_epoch: int = config.decision_epoch
         self.num_agents: int = config.number_of_agents
 
-        self.reserved_spots = []
-        self.current_plan_for_agents = defaultdict(list)
+        self.current_spot_for_agents = np.full(self.num_agents, -1, dtype=int)
 
         self.distance_matrix = get_distance_matrix(graph)
 
-    def act(self, state: dict) -> (dict, None):
+    def act(self, state: dict, **kwargs) -> (dict, None):
         """
         Returns an action based on the state of the environment.
 
@@ -72,15 +71,9 @@ class Lerk(Agent):
         # agent_id is the real ID of an agent
         for agent_id, available in enumerate(available_agents):
             if available:
-                if len(self.current_plan_for_agents[agent_id]) > 0:
-                    next_spot = self.current_plan_for_agents[agent_id].pop(0)
-                    actions[agent_id] = resource_id_to_edge_id_mapping[next_spot]
-                    self.reserved_spots.remove(next_spot)
-                # use all agents ?
-                else:
-                    list_of_available_officers.append(masked_agent_id)
-                    masked_agent_id += 1
-                    real_agent_ids.append(agent_id)
+                list_of_available_officers.append(masked_agent_id)
+                masked_agent_id += 1
+                real_agent_ids.append(agent_id)
         if masked_agent_id == 0:
             return actions, None
 
@@ -93,9 +86,8 @@ class Lerk(Agent):
 
         for resource in self.env.resources:
             if resource.status == ParkingStatus.IN_VIOLATION:
-                if resource.ident not in self.reserved_spots:
+                if resource.ident not in self.current_spot_for_agents:
                     list_of_current_parking_violations.append(resource.ident)
-                    self.reserved_spots.append(resource.ident)
 
         lerk = self.find_best_lerk(list_of_available_officers, list_of_current_parking_violations)
 
@@ -112,9 +104,7 @@ class Lerk(Agent):
             elif first_node & available_agents[real_agent_ids[masked_agent_id]]:
                 first_node = False
                 actions[real_agent_ids[masked_agent_id]] = resource_id_to_edge_id_mapping[ID]
-                self.reserved_spots.remove(ID)
-            else:
-                self.current_plan_for_agents[real_agent_ids[masked_agent_id]].append(ID)
+                self.current_spot_for_agents[real_agent_ids[masked_agent_id]] = ID
 
         return actions, None
 
@@ -124,10 +114,10 @@ class Lerk(Agent):
         for i in range(self.population_size):
             lerk_population.append((self.create_lerk(list_of_available_officers, list_of_current_parking_violations), 0))
 
-        for _ in range(self.lerk_iterations):
+        for iteration in range(self.lerk_iterations):
             for index, (lerk, rating) in enumerate(lerk_population):
                 lerk_population[index] = (lerk, self._rate_lerk(lerk))
-            lerk_population.sort(key=lambda tup: tup[1])
+            lerk_population.sort(key=lambda tup: tup[1], reverse=True)
 
             new_lerk_population = []
             for index, (lerk, rating) in enumerate(lerk_population):
@@ -169,7 +159,7 @@ class Lerk(Agent):
         for index, (lerk, rating) in enumerate(lerk_population):
             lerk_population[index] = (lerk, self._rate_lerk(lerk))
 
-        lerk_population.sort(key=lambda tup: tup[1])
+        lerk_population.sort(key=lambda tup: tup[1], reverse=True)
         return lerk_population[0][0]
 
     @staticmethod
@@ -230,7 +220,9 @@ class Lerk(Agent):
                 closest_spot_id = None
 
                 agent_location_edge_id = None
-                while associated_spots_id:
+                rec = 0
+                while associated_spots_id and rec < 3:
+                    rec += 1
                     distance = None
                     for spot_id in associated_spots_id:
                         violation_time = self.env.current_time - self.env.resources[spot_id].arrival_time - self.env.resources[
@@ -252,11 +244,12 @@ class Lerk(Agent):
                     associated_spots_id.remove(closest_spot_id)
                     # search for the edge the spot is laying on and save it as the new position
                     # of the officer
-                    # todo get from env resource_id to edge id
-                    for index, e in enumerate(self.distance_matrix[:, closest_spot_id]):
-                        if e == 0.0:
-                            agent_location_edge_id = index
-                            break
+                    agent_location_edge_id = self.env.resource_id_to_edge_id_mapping[closest_spot_id]
+
+                # add the rest of the spots which don't get greedily sorted
+                while associated_spots_id:
+                    optimized_lerk.append((0, associated_spots_id.pop(0), associated_values.pop(0)))
+
                 if is_officer == 1:
                     agent_id = ID
                     # add the next spot to the route
@@ -309,16 +302,15 @@ class Lerk(Agent):
 
             total_violation_time: int = self.env.current_time - (self.env.resources[ID].arrival_time + self.env.resources[ID].max_parking_duration_seconds)
 
-            overstay_time = (time_passed + total_violation_time) / self.time_prob_halved
+            overstay_time = (time_passed + total_violation_time)
+            overstay_probability = np.exp(-(1 / self.avg_violation_time) * overstay_time)
 
-            # todo divided by zero error ?? when can overstaytime be -1 --> investigate
-            overstay_probability = 1 - (overstay_time / (overstay_time + 1))
             # print('overstay probability:', overstay_probability)
             if overstay_probability >= self.threshold:
                 sum_catch += 1
+                sum_prob += overstay_probability
             else:
                 sum_catch += 0
-            sum_prob += overstay_probability
 
         if sum_catch == 0:
             return 0.0

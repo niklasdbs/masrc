@@ -5,13 +5,18 @@ use_wait_action : True
 number_of_environment_steps: 0
 decision_epoch: 60
 wait_action_time: 1
+shared_agent: True
 parallel_env: True
+
+trainer: CLDETrainer
 
 # lerk parameters
 local_rate: 0.5  # value between 0 - 1
 threshold: 0.21 # min probability we assume we can catch the violation 0.21 in paper
-time_prob_halved: 600  # at 600 every 10 min the probability a car is still there halves todo check for parameter in paper
+avg_violation_time: 2530 #depends on the area
 
 # genetic algorithm
 population_size: 100 # 100 paper
 lerk_iterations: 300 # 300 paper
+
+model: { name: nomodel}

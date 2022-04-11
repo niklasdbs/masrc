@@ -28,7 +28,6 @@ class FullObservationMardam(CommonObservationLogic):
         if self.use_other_agent_features:
             self.resource_observation_feature_size += 5 * self.number_of_agents
 
-        # todo the box value range
         self._observation_space = spaces.Tuple([
             spaces.Box(0, 1, shape=(number_of_agents, self.agent_observation_feature_size)),
             spaces.Box(0, 1, shape=(number_of_resources, self.resource_observation_feature_size)),
@@ -112,7 +111,6 @@ class FullObservationMardam(CommonObservationLogic):
         resource_observations = np.zeros((self.number_of_resources, self.resource_observation_feature_size),
                                          dtype=np.float32)
 
-        # todo maybe add additional features
         for resource in env.resources:
             resource_observations[resource.ident, resource.status] = 1  # one hot encoding of parking status
             x = (resource.x - self._min_x) / (self._max_x - self._min_x)

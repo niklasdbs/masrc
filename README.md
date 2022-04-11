@@ -33,6 +33,3 @@ Everything is configured using hydra.
 
 ## How to run
 python main.py -m +experiment=twin_grcn
-
-#TODO moaf
-#TODO remove all references to name (nst), strauss, dbs, ifi, lmu, ...
